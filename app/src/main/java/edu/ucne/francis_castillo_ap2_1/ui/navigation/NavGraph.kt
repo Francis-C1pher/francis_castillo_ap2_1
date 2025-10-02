@@ -7,7 +7,7 @@ import androidx.navigation.compose.composable
 import edu.ucne.francis_castillo_ap2_1.ui.screens.EntradasHuacalesListScreen
 import edu.ucne.francis_castillo_ap2_1.ui.entradashuacales.EntradasHuacalesFormScreen
 
-// Renombramos a Routes para evitar conflicto con otras clases llamadas Screen
+
 object Routes {
     const val ENTRADAS_LIST = "entradas_list"
     const val ENTRADAS_FORM = "entradas_form/{entradaId}"
