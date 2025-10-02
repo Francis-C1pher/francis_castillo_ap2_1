@@ -1,75 +1,114 @@
 package edu.ucne.francis_castillo_ap2_1.data.viewmodel
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.ucne.francis_castillo_ap2_1.data.entity.EntradasHuacalesEntity
-
 import edu.ucne.francis_castillo_ap2_1.data.repository.EntradasHuacalesRepository
-import edu.ucne.francis_castillo_ap2_1.domain.usecase.*
+import edu.ucne.francis_castillo_ap2_1.ui.entradashuacales.EntradasState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-@HiltViewModel
-class EntradasHuacalesViewModel @Inject constructor(
-    private val getAllUseCase: GetAllEntradasHuacalesUseCase,
-    private val getUseCase: GetEntradasHuacalesUseCase,
-    private val insertUseCase: InsertEntradasHuacalesUseCase,
-    private val updateUseCase: UpdateEntradasHuacalesUseCase,
-    private val deleteUseCase: DeleteEntradasHuacalesUseCase,
-    private val searchUseCase: SearchEntradasHuacalesUseCase
+class EntradasHuacalesViewModel(
+    private val repository: EntradasHuacalesRepository
 ) : ViewModel() {
 
-    private val _entradas = MutableStateFlow<List<EntradasHuacalesEntity>>(emptyList())
-    val entradas: StateFlow<List<EntradasHuacalesEntity>> = _entradas.asStateFlow()
+    private val _state = MutableStateFlow(EntradasState())
+    val state: StateFlow<EntradasState> = _state
 
-    val currentEntrada: MutableState<EntradasHuacalesEntity?> = mutableStateOf(null)
+    // Helpers para acceder más fácil desde UI
+    val entradas: List<EntradasHuacalesEntity> get() = _state.value.entradas
+    val currentEntrada: EntradasHuacalesEntity? get() = _state.value.currentEntrada
 
-    init {
-        loadAllEntradas()
-    }
-
+    // Cargar todas las entradas
     fun loadAllEntradas() {
         viewModelScope.launch {
-            _entradas.value = getAllUseCase()
+            try {
+                val lista = repository.getAllEntradas() // Flow<List<EntradasHuacalesEntity>>
+                    .first()
+                _state.update { it.copy(entradas = lista, isLoading = false, error = null) }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message, isLoading = false) }
+            }
         }
     }
 
-    fun getEntradaById(id: Int) {
-        viewModelScope.launch {
-            currentEntrada.value = getUseCase(id)
-        }
-    }
-
-    fun insertEntrada(entrada: EntradasHuacalesEntity) {
-        viewModelScope.launch {
-            insertUseCase(entrada)
-            loadAllEntradas()
-        }
-    }
-
-    fun updateEntrada(entrada: EntradasHuacalesEntity) {
-        viewModelScope.launch {
-            updateUseCase(entrada)
-            loadAllEntradas()
-        }
-    }
-
-    fun deleteEntrada(entrada: EntradasHuacalesEntity) {
-        viewModelScope.launch {
-            deleteUseCase(entrada)
-            loadAllEntradas()
-        }
-    }
-
+    // Buscar entradas por nombre de cliente
     fun searchEntradas(query: String) {
         viewModelScope.launch {
-            _entradas.value = searchUseCase(query)
+            try {
+                val lista = repository.searchEntradas(query).first()
+                _state.update { it.copy(entradas = lista, isLoading = false, error = null) }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message, isLoading = false) }
+            }
         }
+    }
+
+    // Obtener una entrada por ID para edición
+    fun getEntradaById(id: Int) {
+        viewModelScope.launch {
+            try {
+                val entrada = repository.getEntradaById(id)
+                _state.update { it.copy(currentEntrada = entrada) }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    // Insertar una nueva entrada
+    fun insertEntrada(entrada: EntradasHuacalesEntity) {
+        viewModelScope.launch {
+            try {
+                repository.insertEntrada(entrada)
+                loadAllEntradas()
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    // Actualizar entrada existente
+    fun updateEntrada(entrada: EntradasHuacalesEntity) {
+        viewModelScope.launch {
+            try {
+                repository.updateEntrada(entrada)
+                loadAllEntradas()
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    // Eliminar entrada
+    fun deleteEntrada(entrada: EntradasHuacalesEntity) {
+        viewModelScope.launch {
+            try {
+                repository.deleteEntrada(entrada)
+                loadAllEntradas()
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    // Funciones para errores de validación de UI
+    fun setNombreError(message: String?) {
+        _state.update { it.copy(nombreClienteError = message) }
+    }
+
+    fun setCantidadError(message: String?) {
+        _state.update { it.copy(cantidadError = message) }
+    }
+
+    fun setPrecioError(message: String?) {
+        _state.update { it.copy(precioError = message) }
+    }
+
+    // Limpiar entrada actual
+    fun clearCurrentEntrada() {
+        _state.update { it.copy(currentEntrada = null) }
     }
 }

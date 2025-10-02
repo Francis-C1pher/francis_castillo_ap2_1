@@ -8,7 +8,7 @@ import java.util.Date
 @Entity(tableName = "entradas_huacales")
 data class EntradasHuacalesEntity(
     @PrimaryKey(autoGenerate = true)
-    val entradaId: Int = 0,
+    val entradaId: Int? = null,
     val fecha: Date,
     val nombreCliente: String,
     val cantidad: Int,
